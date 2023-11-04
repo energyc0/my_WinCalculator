@@ -101,50 +101,33 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	}
 	case WM_KEYDOWN:
 	{
-		switch (wparam)
+		if (wparam >= '0' && wparam <= '9')
 		{
-		case '1':
+			PostMessage(hwnd, WM_COMMAND, wparam-48, 0);
+		}
+		else
 		{
-			return 0;
+			switch (wparam)
+			{
+			case VK_RETURN:
+			{
+				PostMessage(hwnd, WM_COMMAND, equals, 0);
+				break;
+			}
+			case VK_BACK:
+			{
+				PostMessage(hwnd, WM_COMMAND, del, 0);
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				PostMessage(hwnd, WM_COMMAND, clear_all, 0);
+				break;
+			}
+			default:break;
+			}
 		}
-		case '2':
-		{
-			return 0;
-		}
-		case '3':
-		{
-			return 0;
-		}
-		case '4':
-		{
-			return 0;
-		}
-		case '5':
-		{
-			return 0;
-		}
-		case '6':
-		{
-			return 0;
-		}
-		case '7':
-		{
-			return 0;
-		}
-		case '8':
-		{
-			return 0;
-		}
-		case '9':
-		{
-			return 0;
-		}
-		case '0':
-		{
-			return 0;
-		}
-		default:break;
-		}
+		return 0;
 	}
 	case WM_COMMAND:
 	{

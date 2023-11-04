@@ -1,5 +1,1 @@
-﻿  calculator.cpp
-C:\Users\baurm\source\repos\windowcalc\windowcalc\calculator.cpp(16,1): warning C4005: plus: изменение макроопределения
-C:\Users\baurm\source\repos\windowcalc\windowcalc\calculator.cpp(5): message : см. предыдущее определение "plus"
-C:\Users\baurm\source\repos\windowcalc\windowcalc\calculator.cpp(35,87): warning C4267: аргумент: преобразование из "size_t" в "int"; возможна потеря данных
-  windowcalc.vcxproj -> C:\Users\baurm\source\repos\windowcalc\x64\Debug\windowcalc.exe
+﻿  windowcalc.vcxproj -> C:\Users\baurm\source\repos\windowcalc\x64\Debug\windowcalc.exe

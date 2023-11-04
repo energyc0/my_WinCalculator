@@ -1,8 +1,9 @@
 #include <Windows.h>
 #include <string>
+#include "resource.h"
 
+// название класса окна
 #define WINCLASS_NAME "WinCalc"
-#define plus 1
 
 const int WIDTH = 400;	// ширина окна
 const int HEIGHT = 600;	// высота окна
@@ -11,7 +12,8 @@ const int buttonSize = 60;	// размер кнопки
 const int buttonDist = 10;	// расстояние между кнопками
 const int buttonBegX = 55;	// начало кнопок x
 const int buttonBegY = 160;	// Начало кнопок y
-RECT AnsRect{ 20, 10, WIDTH - 25, buttonBegY - 10 }; // прямоугольник вывода чисел
+RECT AnsRect{ 20, 10, WIDTH - 25, buttonBegY - 10 }; // прямоугольник вывода чисел ответа
+RECT TempRect{ 20, 10, WIDTH /2 - 25, buttonBegY /2 - 10 }; // прямоугольник вывода временных чисел
 
 #define plus 10
 #define minus 11
@@ -20,19 +22,49 @@ RECT AnsRect{ 20, 10, WIDTH - 25, buttonBegY - 10 }; // прямоугольник вывода чис
 #define equals 14
 #define del 15
 #define dot 16
+#define clear_all 17
 
-std::string ans = "0";
-float temp = 0;
-auto FONT = CreateFont(50, 20, 3, 0, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+std::string ans = "0";	// число, отображаемое в калькуляторе
+std::string temp = "";	// временная переменная
+auto FontAns = CreateFont(50, 20, 3, 0, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);	// шрифт для ответа
+auto FontTemp = CreateFont(20, 10, 3, 0, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);	// шрифт для временного значения
+bool GotAns = false; // был ли получен ответ 
 
 void DrawNumbers(HDC hdc)	// прорисовка чисел в квадрате
 {
-	SelectObject(hdc, FONT);
+	SelectObject(hdc, FontAns);
 	SetBkColor(hdc, RGB(240, 240, 240));
 	SelectObject(hdc, (HPEN)GetStockObject(BLACK_PEN));
 	SelectObject(hdc, CreateSolidBrush(RGB(240, 240, 240)));
 	Rectangle(hdc, 10, 10, WIDTH - 25, buttonBegY - 10);
-	DrawText(hdc, ans.c_str(), ans.size(), &AnsRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	// максимальное число разрядов - 14, дальше не показывать
+	std::string tempStr; // временная переменная для хранения огромных чисел
+	if (ans.size() > 14)	// урезаем количество цифр
+	{
+		tempStr = { ans.begin(), ans.begin() + 11 };
+		tempStr += "...";
+	}
+	else	// если меньше 14
+	{
+		tempStr = ans;
+	}
+	DrawText(hdc, tempStr.c_str(), (int)tempStr.size(), &AnsRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	SelectObject(hdc, FontTemp);
+	if (temp.size() > 14)	// урезаем количество цифр
+	{
+		tempStr = { temp.begin(), temp.begin() + 11 };
+		tempStr += "...";
+	}
+	else	// если меньше 14
+	{
+		tempStr = temp;
+	}
+	DrawText(hdc, tempStr.c_str(), (int)tempStr.size(), &TempRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	if (ans == "Error")	// если произошла ошибка при вычислениях
+	{
+		ans = "0";
+		temp = "";
+	}
 }
 
 LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -120,8 +152,35 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			if (ans == "0")
 				ans = "";
+			if (GotAns)
+			{
+				ans = "";
+				GotAns = false;	// ввод нового числа после получения ответа
+			}
 			ans += std::to_string(LOWORD(wparam));
 			PostMessage(hwnd, WM_PAINT, 0, 0);
+		}
+		else if (LOWORD(wparam) == del)	// если удаляется цифра
+		{
+			// удаление последней цифры числа
+		ans.erase(ans.end() - 1);
+		if (ans.size() == 0)
+			ans = "0";
+		}
+		else if (LOWORD(wparam) == dot)	// если вводится точка
+		{
+			if (GotAns)
+			{
+				GotAns = false;
+				ans = "0.";
+			}
+			else if (ans.find('.') == std::string::npos)
+				ans += '.';
+		}
+		else if (LOWORD(wparam) == clear_all)	// если производится очистка выражения
+		{
+			ans = "0";
+			temp = "";
 		}
 		else
 		{
@@ -129,38 +188,120 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 			case plus:
 			{
+				// операция сложения
+				if (temp == "")
+				{
+					temp = ans + '+';
+					ans = temp;
+					ans.erase(ans.end() - 1);
+				}
+				else if(!(temp.back() >= '0' && temp.back() <= '9'))
+				{
+					temp.erase(temp.end() - 1);
+					temp += '+';
+				}
 				break;
 			}
 			case minus:
 			{
+				// операция вычитания
+				if (temp == "")
+				{
+					temp = ans + '-';
+					ans = temp;
+					ans.erase(ans.end() - 1);
+				}
+				else if (!(temp.back() >= '0' && temp.back() <= '9'))
+				{
+					temp.erase(temp.end() - 1);
+					temp += '-';
+				}
 				break;
 			}
 			case divis:
 			{
+				// операция деления
+				if (temp == "")
+				{
+					temp = ans + '/';
+					ans = temp;
+					ans.erase(ans.end() - 1);
+				}
+				else if (!(temp.back() >= '0' && temp.back() <= '9'))
+				{
+					temp.erase(temp.end() - 1);
+					temp += '/';
+				}
 				break;
 			}
 			case multi:
 			{
+				// операция умножения
+				if (temp == "")
+				{
+					temp = ans + '*';
+					ans = temp;
+					ans.erase(ans.end() - 1);
+				}
+				else if (!(temp.back() >= '0' && temp.back() <= '9'))
+				{
+					temp.erase(temp.end() - 1);
+					temp += '*';
+				}
 				break;
 			}
 			case equals:
 			{
-				break;
-			}
-			case del:
-			{
-				// удаление последней цифры числа
-				ans.erase(ans.end()-1);
-				if (ans.size() == 0)
-					ans = "0";
-				break;
-			}
-			case dot:
-			{
+				// операция равенства
+				if (temp.size() == 0) // если строка пустая
+				{
+					temp = ans;
+				}
+				else if (!(temp.back() >= '0' && temp.back() <='9'))
+				{
+					switch (temp.back())	// какое действие выполнять
+					{
+					case '+':
+					{
+						ans = std::to_string(stof(temp) + stof(ans));
+						break;
+					}
+					case '-':
+					{
+						ans = std::to_string(stof(temp) - stof(ans));
+						break;
+					}
+					case '*':
+					{
+						ans = std::to_string(stof(temp) * stof(ans));
+						break;
+					}
+					case '/':
+					{
+						if (stof(ans) == 0)
+						{
+							ans = "Error";
+							temp = ans;
+						}
+						else
+						{
+							ans = std::to_string(stof(temp) / stof(ans));
+						}
+						break;
+					}
+					default:break;
+					}
+					if (ans != "Error" && stof(ans) == (int)stof(ans))	// если получилось целое число, то не выводить дробную часть
+						ans = std::to_string((int)stof(ans));
+					if (ans != "Error" && stof(temp) == (int)stof(temp))
+						temp = std::to_string((int)stof(temp));	// если получилось целое число, то не выводить дробную часть
+				}
+				temp = ans + '=';	// добавить к ответу знак равенства
 				break;
 			}
 			default: break;
 			}
+			GotAns = true;
 		}
 		hdc = GetDC(hwnd);
 		DrawNumbers(hdc);
@@ -185,12 +326,12 @@ int WINAPI WinMain(_In_ HINSTANCE hinstance,_In_opt_ HINSTANCE hprevinstance,_In
 	winclass.cbClsExtra = 0;
 	winclass.cbWndExtra =0;
 	winclass.hInstance = hinstance;
-	winclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	winclass.hIcon = LoadIcon(hinstance,MAKEINTRESOURCE(IDI_ICON1));
 	winclass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	winclass.hbrBackground = CreateSolidBrush(RGB(200,200,200));
 	winclass.lpszClassName = WINCLASS_NAME;
 	winclass.lpszMenuName = NULL;
-	winclass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+	winclass.hIconSm = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
 //////////////////////////// класс кнопки
 	winbutton.cbSize = sizeof(WNDCLASSEX);
 	winbutton.style = NULL;
@@ -227,6 +368,7 @@ int WINAPI WinMain(_In_ HINSTANCE hinstance,_In_opt_ HINSTANCE hprevinstance,_In
 // расположение кнопок
 CreateWindowEx(NULL, "button", "+", WS_VISIBLE | WS_CHILD, buttonBegX, buttonBegY, buttonSize, buttonSize, hwnd, (HMENU)plus, hinstance, NULL);
 CreateWindowEx(NULL, "button", "Del", WS_VISIBLE | WS_CHILD, buttonBegX + buttonSize + buttonDist, buttonBegY, buttonSize, buttonSize, hwnd, (HMENU)del, hinstance, NULL);
+CreateWindowEx(NULL, "button", "C", WS_VISIBLE | WS_CHILD, buttonBegX + 2*(buttonSize + buttonDist), buttonBegY, buttonSize, buttonSize, hwnd, (HMENU)clear_all, hinstance, NULL);
 CreateWindowEx(NULL, "button", "-", WS_VISIBLE | WS_CHILD, buttonBegX, buttonBegY + (buttonSize + buttonDist), buttonSize, buttonSize, hwnd, (HMENU)minus, hinstance, NULL);
 CreateWindowEx(NULL, "button", "/", WS_VISIBLE | WS_CHILD, buttonBegX, buttonBegY + 2*(buttonSize + buttonDist), buttonSize, buttonSize, hwnd, (HMENU)divis, hinstance, NULL);
 CreateWindowEx(NULL, "button", "*", WS_VISIBLE | WS_CHILD, buttonBegX, buttonBegY + 3*(buttonSize + buttonDist), buttonSize, buttonSize, hwnd, (HMENU)multi, hinstance, NULL);

@@ -101,25 +101,85 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	}
 	case WM_KEYDOWN:
 	{
-		if (wparam >= '0' && wparam <= '9')
+		if (LOWORD(wparam) >= '0' && LOWORD(wparam) <= '9')	// если вводится число
 		{
-			PostMessage(hwnd, WM_COMMAND, wparam-48, 0);
+			if (GetAsyncKeyState(VK_LSHIFT) || GetAsyncKeyState(VK_RSHIFT))	// если был нажат shift
+				PostMessage(hwnd, WM_COMMAND, multi, 0);
+			else
+				PostMessage(hwnd, WM_COMMAND, wparam - 48, 0);
+		}
+		else if (LOWORD(wparam) >= 96 && LOWORD(wparam) <= 105)	// ввод чисел с нампада
+		{
+			PostMessage(hwnd, WM_COMMAND, wparam - 96, 0);
 		}
 		else
 		{
-			switch (wparam)
+			switch (wparam)	// если нажата любая другая клавиша
 			{
-			case VK_RETURN:
+			case 187:	//  клавиша =+
+			{
+				if (GetAsyncKeyState(VK_LSHIFT) || GetAsyncKeyState(VK_RSHIFT))	// если был нажат shift
+					PostMessage(hwnd, WM_COMMAND, plus, 0);
+				else
+					PostMessage(hwnd, WM_COMMAND, equals, 0);	// shift не был нажат
+				break;
+			}
+			case 107:	// плюс на нампаде
+			{
+				PostMessage(hwnd, WM_COMMAND, plus, 0);
+				break;
+			}
+			case 189:	// минус
+			{
+				PostMessage(hwnd, WM_COMMAND, minus, 0);
+				break;
+			}
+			case VK_SUBTRACT:	// минус на нампаде
+			{
+				PostMessage(hwnd, WM_COMMAND, minus, 0);
+				break;
+			}
+			case 106:	// умножение на нампаде
+			{
+				PostMessage(hwnd, WM_COMMAND, multi, 0);
+				break;
+			}
+			case 111:	// деление на нампаде
+			{
+				PostMessage(hwnd, WM_COMMAND, divis, 0);
+				break;
+			}
+			case 191:	// деление
+			{
+				PostMessage(hwnd, WM_COMMAND, divis, 0);
+				break;
+			}
+			case 190:	// точка
+			{
+				PostMessage(hwnd, WM_COMMAND, dot, 0);
+				break;
+			}
+			case 188:	// запятая
+			{
+				PostMessage(hwnd, WM_COMMAND, dot, 0);
+				break;
+			}
+			case VK_RETURN:	// enter
 			{
 				PostMessage(hwnd, WM_COMMAND, equals, 0);
 				break;
 			}
-			case VK_BACK:
+			case VK_DELETE:	// delete
 			{
 				PostMessage(hwnd, WM_COMMAND, del, 0);
 				break;
 			}
-			case VK_ESCAPE:
+			case VK_BACK:	// backspace
+			{
+				PostMessage(hwnd, WM_COMMAND, del, 0);
+				break;
+			}
+			case VK_ESCAPE:	// escape
 			{
 				PostMessage(hwnd, WM_COMMAND, clear_all, 0);
 				break;
@@ -261,7 +321,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					}
 					case '/':
 					{
-						if (stof(ans) == 0)
+						if (stof(ans) == 0)	// на ноль нельзя делить
 						{
 							ans = "Error";
 							temp = ans;
@@ -289,6 +349,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		hdc = GetDC(hwnd);
 		DrawNumbers(hdc);
 		ReleaseDC(hwnd, hdc);
+		SetFocus(hwnd);
 		return 0;
 	}
 	default: break;
@@ -339,7 +400,7 @@ int WINAPI WinMain(_In_ HINSTANCE hinstance,_In_opt_ HINSTANCE hprevinstance,_In
 		NULL,
 		WINCLASS_NAME,
 		"CALCULATOR",
-		WS_VISIBLE | WS_SYSMENU,
+		WS_VISIBLE | WS_SYSMENU | WS_CLIPCHILDREN,
 		200, 200,
 		WIDTH, HEIGHT,
 		NULL,
@@ -368,6 +429,7 @@ CreateWindowEx(NULL, "button", "8", WS_VISIBLE | WS_CHILD, buttonBegX + 2 * (but
 CreateWindowEx(NULL, "button", "9", WS_VISIBLE | WS_CHILD, buttonBegX + 3 * (buttonSize + buttonDist), buttonBegY + 3 * (buttonDist + buttonSize), buttonSize, buttonSize, hwnd, (HMENU)9, hinstance, NULL);
 CreateWindowEx(NULL, "button", "0", WS_VISIBLE | WS_CHILD, buttonBegX + 2 * (buttonSize + buttonDist), buttonBegY + 4 * (buttonDist + buttonSize), buttonSize, buttonSize, hwnd, (HMENU)0, hinstance, NULL);
 //
+
 
 // главный цикл
 	while (true)
